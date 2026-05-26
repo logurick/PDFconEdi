@@ -9,6 +9,7 @@ This repository rebuilds the core PDF concatenation workflow from ConcatPDF for 
 - remove selected files
 - open a selected source PDF
 - merge all files into one PDF
+- split selected PDFs into page files
 
 ## Requirements
 

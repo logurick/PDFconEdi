@@ -4,6 +4,8 @@ namespace ConcatPdfModern;
 
 public sealed class Form1 : Form
 {
+    private const string AppName = "PDFconEdi";
+
     private readonly ListView fileList = new();
     private readonly StatusStrip statusStrip = new();
     private readonly ToolStripStatusLabel statusLabel = new();
@@ -32,7 +34,7 @@ public sealed class Form1 : Form
     {
         SuspendLayout();
 
-        Text = "ConcatPDF Modern";
+        Text = AppName;
         MinimumSize = new Size(780, 480);
         Size = new Size(940, 620);
         StartPosition = FormStartPosition.CenterScreen;
@@ -51,9 +53,9 @@ public sealed class Form1 : Form
         fileList.HideSelection = false;
         fileList.MultiSelect = true;
         fileList.AllowDrop = true;
-        fileList.Columns.Add("ファイル名", 320);
-        fileList.Columns.Add("ページ", 80, HorizontalAlignment.Right);
-        fileList.Columns.Add("フォルダ", 460);
+        fileList.Columns.Add("File", 320);
+        fileList.Columns.Add("Pages", 80, HorizontalAlignment.Right);
+        fileList.Columns.Add("Folder", 460);
         fileList.SelectedIndexChanged += (_, _) => UpdateCommands();
         fileList.DoubleClick += (_, _) => OpenSelectedFile();
         fileList.DragEnter += Form_DragEnter;
@@ -61,7 +63,7 @@ public sealed class Form1 : Form
 
         dropHint.Dock = DockStyle.Top;
         dropHint.Height = 38;
-        dropHint.Text = "PDFファイルを追加して、順番を整えてから「結合して保存」を押してください。ドラッグ＆ドロップにも対応しています。";
+        dropHint.Text = "Add PDF files, adjust their order, then choose Merge and Save. Drag and drop is supported.";
         dropHint.TextAlign = ContentAlignment.MiddleLeft;
         dropHint.Padding = new Padding(12, 0, 12, 0);
 
@@ -75,7 +77,7 @@ public sealed class Form1 : Form
         Controls.Add(menu);
         Controls.Add(statusStrip);
 
-        UpdateCommands();
+        SetStatus("Ready.");
 
         ResumeLayout(false);
         PerformLayout();
@@ -85,25 +87,25 @@ public sealed class Form1 : Form
     {
         var menu = new MenuStrip();
 
-        var fileMenu = new ToolStripMenuItem("ファイル(&F)");
-        fileMenu.DropDownItems.Add("追加(&A)...", null, (_, _) => PickFiles());
-        fileMenu.DropDownItems.Add("結合して保存(&S)...", null, (_, _) => SaveMergedPdf());
+        var fileMenu = new ToolStripMenuItem("&File");
+        fileMenu.DropDownItems.Add("&Add...", null, (_, _) => PickFiles());
+        fileMenu.DropDownItems.Add("&Merge and Save...", null, (_, _) => SaveMergedPdf());
         fileMenu.DropDownItems.Add(new ToolStripSeparator());
-        fileMenu.DropDownItems.Add("終了(&X)", null, (_, _) => Close());
+        fileMenu.DropDownItems.Add("E&xit", null, (_, _) => Close());
 
-        var editMenu = new ToolStripMenuItem("編集(&E)");
-        editMenu.DropDownItems.Add("削除(&R)", null, (_, _) => RemoveSelected());
+        var editMenu = new ToolStripMenuItem("&Edit");
+        editMenu.DropDownItems.Add("&Remove", null, (_, _) => RemoveSelected());
         editMenu.DropDownItems.Add(new ToolStripSeparator());
-        editMenu.DropDownItems.Add("上へ(&U)", null, (_, _) => MoveSelected(-1));
-        editMenu.DropDownItems.Add("下へ(&D)", null, (_, _) => MoveSelected(1));
+        editMenu.DropDownItems.Add("Move &Up", null, (_, _) => MoveSelected(-1));
+        editMenu.DropDownItems.Add("Move &Down", null, (_, _) => MoveSelected(1));
         editMenu.DropDownItems.Add(new ToolStripSeparator());
-        editMenu.DropDownItems.Add("すべて選択(&A)", null, (_, _) => SelectAllFiles());
+        editMenu.DropDownItems.Add("Select &All", null, (_, _) => SelectAllFiles());
 
-        var viewMenu = new ToolStripMenuItem("表示(&V)");
-        viewMenu.DropDownItems.Add("選択したPDFを開く(&O)", null, (_, _) => OpenSelectedFile());
+        var viewMenu = new ToolStripMenuItem("&View");
+        viewMenu.DropDownItems.Add("&Open Selected PDF", null, (_, _) => OpenSelectedFile());
 
-        var helpMenu = new ToolStripMenuItem("ヘルプ(&H)");
-        helpMenu.DropDownItems.Add("このアプリについて(&A)", null, (_, _) => ShowAbout());
+        var helpMenu = new ToolStripMenuItem("&Help");
+        helpMenu.DropDownItems.Add("&About", null, (_, _) => ShowAbout());
 
         menu.Items.AddRange([fileMenu, editMenu, viewMenu, helpMenu]);
         return menu;
@@ -120,12 +122,12 @@ public sealed class Form1 : Form
             AutoScroll = true
         };
 
-        ConfigureButton(addButton, "追加", (_, _) => PickFiles());
-        ConfigureButton(removeButton, "削除", (_, _) => RemoveSelected());
-        ConfigureButton(upButton, "上へ", (_, _) => MoveSelected(-1));
-        ConfigureButton(downButton, "下へ", (_, _) => MoveSelected(1));
-        ConfigureButton(openButton, "開く", (_, _) => OpenSelectedFile());
-        ConfigureButton(mergeButton, "結合して保存", (_, _) => SaveMergedPdf(), width: 132);
+        ConfigureButton(addButton, "Add", (_, _) => PickFiles());
+        ConfigureButton(removeButton, "Remove", (_, _) => RemoveSelected());
+        ConfigureButton(upButton, "Up", (_, _) => MoveSelected(-1));
+        ConfigureButton(downButton, "Down", (_, _) => MoveSelected(1));
+        ConfigureButton(openButton, "Open", (_, _) => OpenSelectedFile());
+        ConfigureButton(mergeButton, "Merge and Save", (_, _) => SaveMergedPdf(), width: 132);
 
         toolbar.Controls.AddRange([addButton, removeButton, upButton, downButton, openButton, mergeButton]);
         return toolbar;
@@ -147,7 +149,7 @@ public sealed class Form1 : Form
             Filter = "PDF files (*.pdf)|*.pdf|All files (*.*)|*.*",
             Multiselect = true,
             RestoreDirectory = true,
-            Title = "結合するPDFファイルを選択"
+            Title = "Select PDF files"
         };
 
         if (dialog.ShowDialog(this) == DialogResult.OK)
@@ -175,19 +177,19 @@ public sealed class Form1 : Form
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, $"{path}\n\n{ex.Message}", "PDFを追加できません", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, $"{path}\n\n{ex.Message}", "Could not add PDF", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 
         RefreshFileList();
-        SetStatus(added == 0 ? "追加できるPDFがありませんでした。" : $"{added}件のPDFを追加しました。");
+        SetStatus(added == 0 ? "No PDF files were added." : $"Added {added} PDF file(s).");
     }
 
     private void SaveMergedPdf()
     {
         if (files.Count == 0)
         {
-            SetStatus("PDFを追加してください。");
+            SetStatus("Add PDF files first.");
             return;
         }
 
@@ -199,7 +201,7 @@ public sealed class Form1 : Form
             FileName = "merged.pdf",
             OverwritePrompt = true,
             RestoreDirectory = true,
-            Title = "結合したPDFの保存先"
+            Title = "Save merged PDF"
         };
 
         if (dialog.ShowDialog(this) != DialogResult.OK)
@@ -208,18 +210,18 @@ public sealed class Form1 : Form
         }
 
         Cursor = Cursors.WaitCursor;
-        SetStatus("PDFを結合しています...");
+        SetStatus("Merging PDF files...");
 
         try
         {
             PdfMerger.Merge(files, dialog.FileName);
-            SetStatus($"保存しました: {dialog.FileName}");
-            MessageBox.Show(this, "PDFの結合が完了しました。", "ConcatPDF Modern", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            SetStatus($"Saved: {dialog.FileName}");
+            MessageBox.Show(this, "PDF merge completed.", AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
-            SetStatus("結合に失敗しました。");
-            MessageBox.Show(this, ex.Message, "PDFを結合できません", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            SetStatus("Merge failed.");
+            MessageBox.Show(this, ex.Message, "Could not merge PDFs", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
         finally
         {
@@ -236,7 +238,7 @@ public sealed class Form1 : Form
         }
 
         RefreshFileList();
-        SetStatus($"{selectedIndexes.Length}件を削除しました。");
+        SetStatus($"Removed {selectedIndexes.Length} item(s).");
     }
 
     private void MoveSelected(int direction)
@@ -268,7 +270,7 @@ public sealed class Form1 : Form
         }
 
         RefreshFileList(selected.Select(index => index + direction));
-        SetStatus("順番を変更しました。");
+        SetStatus("Order updated.");
     }
 
     private void SelectAllFiles()
@@ -293,7 +295,7 @@ public sealed class Form1 : Form
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, "PDFを開けません", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(this, ex.Message, "Could not open PDF", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
     }
 
@@ -338,7 +340,7 @@ public sealed class Form1 : Form
         openButton.Enabled = hasSelection;
         mergeButton.Enabled = hasFiles;
 
-        pageCountLabel.Text = $"{files.Count}ファイル / {files.Sum(file => file.PageCount)}ページ";
+        pageCountLabel.Text = $"{files.Count} file(s) / {files.Sum(file => file.PageCount)} page(s)";
     }
 
     private void SetStatus(string message)
@@ -367,8 +369,8 @@ public sealed class Form1 : Form
     {
         MessageBox.Show(
             this,
-            "ConcatPDF Modern\n\n.NETの現行Windowsデスクトップ環境向けに作り直したPDF結合ツールです。\nPDF操作には PDFsharp を使用しています。",
-            "ConcatPDF Modern",
+            "PDFconEdi\n\nA modern Windows desktop app for combining PDF files.\nPDF handling is powered by PDFsharp.",
+            AppName,
             MessageBoxButtons.OK,
             MessageBoxIcon.Information);
     }

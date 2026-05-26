@@ -1,8 +1,8 @@
-# ConcatPDF Modern
+# PDFconEdi
 
-ConcatPDF Modern is a rebuild of the core PDF concatenation workflow from ConcatPDF for current Windows desktop environments.
+PDFconEdi is a modern Windows desktop app for combining PDF files.
 
-The original ConcatPDF supported many operations, including concatenation, extraction, encryption, decryption, viewer settings, and image conversion. This repository starts with a small, modern WinForms application focused on the most common workflow:
+This repository rebuilds the core PDF concatenation workflow from ConcatPDF for current Windows desktop environments. It starts with a focused WinForms application for the most common workflow:
 
 - add PDF files
 - reorder them
@@ -27,6 +27,12 @@ dotnet build
 
 ```powershell
 dotnet run
+```
+
+## Command Line
+
+```powershell
+dotnet run -- --output merged.pdf input1.pdf input2.pdf
 ```
 
 PDF handling is implemented with PDFsharp.

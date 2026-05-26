@@ -5,6 +5,8 @@ namespace ConcatPdfModern;
 
 public static class PdfMerger
 {
+    private const string AppName = "PDFconEdi";
+
     public static PdfFileEntry ReadEntry(string path)
     {
         using var document = PdfReader.Open(path, PdfDocumentOpenMode.Import);
@@ -16,12 +18,12 @@ public static class PdfMerger
         var inputFiles = entries.ToList();
         if (inputFiles.Count == 0)
         {
-            throw new InvalidOperationException("結合するPDFがありません。");
+            throw new InvalidOperationException("There are no PDF files to merge.");
         }
 
         using var output = new PdfDocument();
         output.Info.Title = Path.GetFileNameWithoutExtension(outputPath);
-        output.Info.Creator = "ConcatPDF Modern";
+        output.Info.Creator = AppName;
 
         foreach (var entry in inputFiles)
         {

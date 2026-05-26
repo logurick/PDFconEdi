@@ -1,5 +1,7 @@
 # PDFconEdi
 
+[日本語README](README.ja.md)
+
 PDFconEdi is a modern Windows desktop app for combining PDF files.
 
 This repository rebuilds the core PDF concatenation workflow from ConcatPDF for current Windows desktop environments. It starts with a focused WinForms application for the most common workflow:

@@ -16,7 +16,7 @@ public sealed class Form1 : Form
     private readonly Button downButton = new();
     private readonly Button openButton = new();
     private readonly Button splitButton = new();
-    private readonly Button mergeButton = new();
+    private readonly Button saveButton = new();
     private readonly Label dropHint = new();
 
     private readonly List<PdfFileEntry> files = [];
@@ -46,8 +46,6 @@ public sealed class Form1 : Form
         var menu = BuildMenu();
         MainMenuStrip = menu;
 
-        var toolbar = BuildToolbar();
-
         fileList.Dock = DockStyle.Fill;
         fileList.View = View.Details;
         fileList.FullRowSelect = true;
@@ -65,7 +63,7 @@ public sealed class Form1 : Form
 
         dropHint.Dock = DockStyle.Top;
         dropHint.Height = 38;
-        dropHint.Text = "PDFを追加して順番を整え、「結合して保存」を押してください。ドラッグ＆ドロップにも対応しています。";
+        dropHint.Text = "PDFを追加し、必要に応じて一覧上で分割してから「保存」を押してください。";
         dropHint.TextAlign = ContentAlignment.MiddleLeft;
         dropHint.Padding = new Padding(12, 0, 12, 0);
 
@@ -75,7 +73,7 @@ public sealed class Form1 : Form
 
         Controls.Add(fileList);
         Controls.Add(dropHint);
-        Controls.Add(toolbar);
+        Controls.Add(BuildToolbar());
         Controls.Add(menu);
         Controls.Add(statusStrip);
 
@@ -91,12 +89,12 @@ public sealed class Form1 : Form
 
         var fileMenu = new ToolStripMenuItem("ファイル(&F)");
         fileMenu.DropDownItems.Add("追加(&A)...", null, (_, _) => PickFiles());
-        fileMenu.DropDownItems.Add("結合して保存(&S)...", null, (_, _) => SaveMergedPdf());
-        fileMenu.DropDownItems.Add("選択PDFを分割(&P)...", null, (_, _) => SplitSelectedPdfs());
+        fileMenu.DropDownItems.Add("保存(&S)...", null, (_, _) => SavePdf());
         fileMenu.DropDownItems.Add(new ToolStripSeparator());
         fileMenu.DropDownItems.Add("終了(&X)", null, (_, _) => Close());
 
         var editMenu = new ToolStripMenuItem("編集(&E)");
+        editMenu.DropDownItems.Add("選択PDFを分割(&P)", null, (_, _) => SplitSelectedPdfs());
         editMenu.DropDownItems.Add("削除(&R)", null, (_, _) => RemoveSelected());
         editMenu.DropDownItems.Add(new ToolStripSeparator());
         editMenu.DropDownItems.Add("上へ移動(&U)", null, (_, _) => MoveSelected(-1));
@@ -122,7 +120,7 @@ public sealed class Form1 : Form
             Height = 48,
             Padding = new Padding(8, 8, 8, 4),
             WrapContents = false,
-            AutoScroll = true
+            AutoScroll = false
         };
 
         ConfigureButton(addButton, "追加", (_, _) => PickFiles());
@@ -131,9 +129,9 @@ public sealed class Form1 : Form
         ConfigureButton(downButton, "下へ", (_, _) => MoveSelected(1));
         ConfigureButton(openButton, "開く", (_, _) => OpenSelectedFile());
         ConfigureButton(splitButton, "分割", (_, _) => SplitSelectedPdfs());
-        ConfigureButton(mergeButton, "結合して保存", (_, _) => SaveMergedPdf(), width: 132);
+        ConfigureButton(saveButton, "保存", (_, _) => SavePdf(), width: 96);
 
-        toolbar.Controls.AddRange([addButton, removeButton, upButton, downButton, openButton, splitButton, mergeButton]);
+        toolbar.Controls.AddRange([addButton, removeButton, upButton, downButton, openButton, splitButton, saveButton]);
         return toolbar;
     }
 
@@ -175,8 +173,7 @@ public sealed class Form1 : Form
 
             try
             {
-                var entry = PdfMerger.ReadEntry(path);
-                files.Add(entry);
+                files.Add(PdfMerger.ReadEntry(path));
                 added++;
             }
             catch (Exception ex)
@@ -189,7 +186,7 @@ public sealed class Form1 : Form
         SetStatus(added == 0 ? "追加できるPDFがありませんでした。" : $"{added}件のPDFを追加しました。");
     }
 
-    private void SaveMergedPdf()
+    private void SavePdf()
     {
         if (files.Count == 0)
         {
@@ -202,10 +199,10 @@ public sealed class Form1 : Form
             AddExtension = true,
             DefaultExt = "pdf",
             Filter = "PDFファイル (*.pdf)|*.pdf",
-            FileName = "結合.pdf",
+            FileName = "保存.pdf",
             OverwritePrompt = true,
             RestoreDirectory = true,
-            Title = "結合したPDFの保存先"
+            Title = "PDFの保存先"
         };
 
         if (dialog.ShowDialog(this) != DialogResult.OK)
@@ -214,23 +211,51 @@ public sealed class Form1 : Form
         }
 
         Cursor = Cursors.WaitCursor;
-        SetStatus("PDFを結合しています...");
+        SetStatus("PDFを保存しています...");
 
         try
         {
-            PdfMerger.Merge(files, dialog.FileName);
+            PdfMerger.Save(files, dialog.FileName);
             SetStatus($"保存しました: {dialog.FileName}");
-            MessageBox.Show(this, "PDFの結合が完了しました。", AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(this, "PDFの保存が完了しました。", AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
-            SetStatus("結合に失敗しました。");
-            MessageBox.Show(this, ex.Message, "PDFを結合できません", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            SetStatus("保存に失敗しました。");
+            MessageBox.Show(this, ex.Message, "PDFを保存できません", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
         finally
         {
             Cursor = Cursors.Default;
         }
+    }
+
+    private void SplitSelectedPdfs()
+    {
+        if (fileList.SelectedIndices.Count == 0)
+        {
+            SetStatus("分割するPDFを選択してください。");
+            return;
+        }
+
+        var selectedIndexes = fileList.SelectedIndices.Cast<int>().OrderDescending().ToArray();
+        var splitCount = 0;
+
+        foreach (var index in selectedIndexes)
+        {
+            var entry = files[index];
+            if (!entry.CanSplit)
+            {
+                continue;
+            }
+
+            files.RemoveAt(index);
+            files.InsertRange(index, PdfMerger.SplitIntoPages(entry));
+            splitCount++;
+        }
+
+        RefreshFileList();
+        SetStatus(splitCount == 0 ? "分割できる複数ページの項目がありません。" : $"{splitCount}件のPDFを一覧上で分割しました。");
     }
 
     private void RemoveSelected()
@@ -303,54 +328,6 @@ public sealed class Form1 : Form
         }
     }
 
-    private void SplitSelectedPdfs()
-    {
-        if (fileList.SelectedIndices.Count == 0)
-        {
-            SetStatus("分割するPDFを選択してください。");
-            return;
-        }
-
-        using var dialog = new FolderBrowserDialog
-        {
-            Description = "分割したPDFの保存先フォルダを選択してください",
-            UseDescriptionForTitle = true
-        };
-
-        if (dialog.ShowDialog(this) != DialogResult.OK)
-        {
-            return;
-        }
-
-        var selectedEntries = fileList.SelectedIndices
-            .Cast<int>()
-            .Order()
-            .Select(index => files[index])
-            .ToList();
-
-        Cursor = Cursors.WaitCursor;
-        SetStatus("PDFを分割しています...");
-
-        try
-        {
-            var createdFiles = selectedEntries
-                .SelectMany(entry => PdfMerger.Split(entry, dialog.SelectedPath))
-                .ToList();
-
-            SetStatus($"{createdFiles.Count}件のPDFを作成しました。");
-            MessageBox.Show(this, $"{createdFiles.Count}件のPDFを作成しました。", AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-        catch (Exception ex)
-        {
-            SetStatus("分割に失敗しました。");
-            MessageBox.Show(this, ex.Message, "PDFを分割できません", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
-        finally
-        {
-            Cursor = Cursors.Default;
-        }
-    }
-
     private void RefreshFileList(IEnumerable<int>? selectedIndexes = null)
     {
         var selected = selectedIndexes?.ToHashSet() ?? [];
@@ -361,7 +338,7 @@ public sealed class Form1 : Form
         foreach (var entry in files)
         {
             var item = new ListViewItem(entry.FileName);
-            item.SubItems.Add(entry.PageCount.ToString());
+            item.SubItems.Add(entry.PageLabel);
             item.SubItems.Add(Path.GetDirectoryName(entry.Path) ?? "");
             fileList.Items.Add(item);
         }
@@ -415,10 +392,10 @@ public sealed class Form1 : Form
         upButton.Enabled = canMoveUp;
         downButton.Enabled = canMoveDown;
         openButton.Enabled = hasSelection;
-        splitButton.Enabled = hasSelection;
-        mergeButton.Enabled = hasFiles;
+        splitButton.Enabled = hasSelection && fileList.SelectedIndices.Cast<int>().Any(index => files[index].CanSplit);
+        saveButton.Enabled = hasFiles;
 
-        pageCountLabel.Text = $"{files.Count}ファイル / {files.Sum(file => file.PageCount)}ページ";
+        pageCountLabel.Text = $"{files.Count}項目 / {files.Sum(file => file.PageCount)}ページ";
     }
 
     private void SetStatus(string message)
@@ -447,7 +424,7 @@ public sealed class Form1 : Form
     {
         MessageBox.Show(
             this,
-            "PDFconEdi\n\nPDFファイルの結合と分割を行うWindowsデスクトップアプリです。\nPDF処理にはPDFsharpを使用しています。",
+            "PDFconEdi\n\nPDFファイルを一覧上で編集し、保存時に1つのPDFとして出力するWindowsデスクトップアプリです。\nPDF処理にはPDFsharpを使用しています。",
             AppName,
             MessageBoxButtons.OK,
             MessageBoxIcon.Information);

@@ -38,7 +38,7 @@ static class Program
             .ToArray();
 
         var entries = inputPaths.Select(PdfMerger.ReadEntry).ToList();
-        PdfMerger.Merge(entries, outputPath);
+        PdfMerger.Save(entries, outputPath);
         return true;
     }
 }

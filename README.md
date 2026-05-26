@@ -8,8 +8,8 @@ This repository rebuilds the core PDF concatenation workflow from ConcatPDF for 
 - reorder them
 - remove selected files
 - open a selected source PDF
-- merge all files into one PDF
-- split selected PDFs into page files
+- split selected PDFs into page items in the list
+- save the edited list into one PDF
 
 ## Requirements
 
